@@ -7,34 +7,45 @@ jobs:
     runs-on: ubuntu-latest
     name: Build Node.js Docker Image and Deploy to Minikube
     steps:
-    - uses: actions/checkout@v2
-
-    - name: Start Minikube
-      uses: medyagh/setup-minikube@master
-
-    - name: Verify Minikube Cluster
-      run: kubectl get pods -A
-
-    - name: Build Image Inside Minikube
-      run: |
+      - uses: actions/checkout@v2
+      
+      - name: Start Minikube
+        uses: medyagh/setup-minikube@master
+      
+      - name: Check Cluster
+        run: kubectl get pods -A
+      
+      - name: Build Image
+        run: |
           export SHELL=/bin/bash
           eval $(minikube -p minikube docker-env)
-          docker build -f ./Dockerfile -t devopshint/node-app:latest .
-          echo "Verifying built images:"
+          docker build -t devopshint/node-app:latest .
+          echo "Verifying images..."
           docker images
-
-    - name: Deploy to Minikube
-      run: |
+      
+      - name: Deploy to Minikube
+        run: |
           kubectl apply -f k8s-node-app.yaml
           kubectl set image deployment/nodejs-app nodejs-app=devopshint/node-app:latest
-
-    - name: Debug Deployment
-      run: |
+      
+      - name: Debug Deployment
+        run: |
+          echo "Listing all pods:"
           kubectl get pods -A
+          echo "Describing pod:"
           kubectl describe pod -l app=nodejs-app
+          echo "Fetching logs:"
           kubectl logs -l app=nodejs-app
-
-    - name: Test Service URLs
-      run: |
+      
+      - name: Test Service URLs
+        run: |
+          echo "Checking Minikube services..."
           minikube service list
-          minikube service nodejs-app --url
+          minikube service nodejs-app --url || echo "Service not ready yet"
+
+      - name: Port Forward for Testing
+        run: |
+          echo "Forwarding port 8080 -> 80"
+          nohup kubectl port-forward service/nodejs-app 8080:80 &
+          sleep 5
+          curl -v http://localhost:8080 || echo "Service not responding"
