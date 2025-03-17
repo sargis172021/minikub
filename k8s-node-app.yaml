@@ -15,10 +15,11 @@ spec:
       labels:
         app: nodejs-app
     spec:
+      restartPolicy: Always
       containers:
       - name: nodejs-app
         image: devopshint/node-app:latest
-        imagePullPolicy: IfNotPresent  # Ensures local image is used
+        imagePullPolicy: IfNotPresent  # Ensure it uses local image
         ports:
         - containerPort: 3000
 ---
